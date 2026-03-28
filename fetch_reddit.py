@@ -1,39 +1,46 @@
 #!/usr/bin/env python3
-"""Fetch recent posts from r/ChaseSapphire via Reddit OAuth API and output them as JSON."""
+"""Fetch recent posts from r/ChaseSapphire via Arctic Shift API and output them as JSON."""
 
 import json
-import os
 import sys
 import time
 from datetime import datetime, timezone
 
-import praw
+import requests
 
 SUBREDDIT = "ChaseSapphire"
 LOOKBACK_HOURS = 24
 
 
 def fetch_posts():
-    reddit = praw.Reddit(
-        client_id=os.environ["REDDIT_CLIENT_ID"],
-        client_secret=os.environ["REDDIT_CLIENT_SECRET"],
-        user_agent="reddit-csr-digest/1.0 (daily deal digest by /u/niharnandan)",
-    )
+    cutoff = int(time.time() - LOOKBACK_HOURS * 3600)
+    url = f"https://arctic-shift.photon-reddit.com/api/posts/search?subreddit={SUBREDDIT}&limit=50&after={cutoff}"
 
-    cutoff = time.time() - LOOKBACK_HOURS * 3600
+    try:
+        response = requests.get(url, timeout=15)
+    except requests.RequestException as e:
+        print(f"ERROR: Request failed: {e}", file=sys.stderr)
+        sys.exit(1)
+
+    print(f"Arctic Shift response: HTTP {response.status_code}", file=sys.stderr)
+
+    if response.status_code != 200:
+        print(f"ERROR: {response.text[:300]}", file=sys.stderr)
+        sys.exit(1)
+
+    posts = response.json().get("data", [])
     results = []
 
-    for post in reddit.subreddit(SUBREDDIT).new(limit=50):
-        if post.created_utc < cutoff:
-            continue
+    for p in posts:
+        created_utc = float(p.get("created_utc", 0))
         results.append({
-            "title": post.title,
-            "body": post.selftext[:500] if post.selftext else "",
-            "score": post.score,
-            "num_comments": post.num_comments,
-            "url": f"https://www.reddit.com{post.permalink}",
-            "created_utc": post.created_utc,
-            "created_human": datetime.fromtimestamp(post.created_utc, tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
+            "title": p.get("title", ""),
+            "body": p.get("selftext", "")[:500],
+            "score": p.get("score", 0),
+            "num_comments": p.get("num_comments", 0),
+            "url": f"https://www.reddit.com{p.get('permalink', '')}",
+            "created_utc": created_utc,
+            "created_human": datetime.fromtimestamp(created_utc, tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         })
 
     print(f"Fetched {len(results)} posts from the last {LOOKBACK_HOURS}h", file=sys.stderr)
