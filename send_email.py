@@ -48,11 +48,10 @@ def build_html(body_content: str) -> str:
 
 
 def main():
-    if len(sys.argv) < 2:
-        print("Usage: python send_email.py <html_body_content>")
+    body_content = sys.stdin.read().strip()
+    if not body_content:
+        print("Error: no HTML body received on stdin")
         sys.exit(1)
-
-    body_content = sys.argv[1]
 
     load_credentials_file()
     gmail_user = os.environ.get("GMAIL_USER")
