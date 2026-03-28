@@ -18,15 +18,18 @@ def fetch_posts():
     try:
         response = requests.get(URL, headers=HEADERS, timeout=15)
     except requests.RequestException as e:
-        print(json.dumps({"error": f"Request failed: {e}"}))
+        print(f"ERROR: Request failed: {e}", file=sys.stderr)
         sys.exit(1)
 
+    print(f"Reddit response: HTTP {response.status_code}", file=sys.stderr)
+
     if response.status_code == 429:
-        print(json.dumps({"error": "Rate limited by Reddit (HTTP 429)"}))
+        print("ERROR: Rate limited by Reddit (HTTP 429)", file=sys.stderr)
         sys.exit(1)
 
     if response.status_code != 200:
-        print(json.dumps({"error": f"Unexpected status code: {response.status_code}"}))
+        print(f"ERROR: Unexpected status code: {response.status_code}", file=sys.stderr)
+        print(f"Response body: {response.text[:500]}", file=sys.stderr)
         sys.exit(1)
 
     data = response.json()
@@ -51,6 +54,7 @@ def fetch_posts():
             "created_human": datetime.fromtimestamp(created, tz=timezone.utc).strftime("%Y-%m-%d %H:%M UTC"),
         })
 
+    print(f"Fetched {len(results)} posts from the last {LOOKBACK_HOURS}h", file=sys.stderr)
     print(json.dumps({"posts": results, "count": len(results), "subreddit": SUBREDDIT}))
 
 

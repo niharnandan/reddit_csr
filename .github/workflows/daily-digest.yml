@@ -18,10 +18,19 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Fetch, summarize, and send digest
+      - name: Fetch Reddit posts
+        run: python fetch_reddit.py > posts.json
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Summarize deals
+        run: python summarize.py < posts.json > email_body.html
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Send email
+        run: python send_email.py < email_body.html
+        env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           EMAIL_TO: ${{ secrets.EMAIL_TO }}
-        run: python fetch_reddit.py | python summarize.py | python send_email.py
