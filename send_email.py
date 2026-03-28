@@ -7,6 +7,18 @@ import sys
 from datetime import date
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
+from pathlib import Path
+
+
+def load_credentials_file():
+    """Load credentials.env from the repo root if it exists."""
+    creds_file = Path(__file__).parent / "credentials.env"
+    if creds_file.exists():
+        for line in creds_file.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#") and "=" in line:
+                key, _, value = line.partition("=")
+                os.environ.setdefault(key.strip(), value.strip())
 
 
 def build_html(body_content: str) -> str:
@@ -42,6 +54,7 @@ def main():
 
     body_content = sys.argv[1]
 
+    load_credentials_file()
     gmail_user = os.environ.get("GMAIL_USER")
     gmail_app_password = os.environ.get("GMAIL_APP_PASSWORD")
     email_to = os.environ.get("EMAIL_TO")
