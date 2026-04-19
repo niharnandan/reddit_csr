@@ -22,12 +22,13 @@ def main():
 
     client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
 
-    message = client.messages.create(
-        model="claude-haiku-4-5",
-        max_tokens=1024,
-        messages=[{
-            "role": "user",
-            "content": f"""You are reviewing posts from r/ChaseSapphire from the last 24 hours.
+    try:
+        message = client.messages.create(
+            model="claude-haiku-4-5",
+            max_tokens=1024,
+            messages=[{
+                "role": "user",
+                "content": f"""You are reviewing posts from r/ChaseSapphire from the last 24 hours.
 Identify posts that are about deals, offers, bonuses, promotions, limited-time offers, point valuations, or referral bonuses.
 Ignore questions, complaints, general discussion, and trip reports.
 
@@ -41,8 +42,11 @@ Posts to review:
 {posts_text}
 
 Output only the HTML blocks, no explanation."""
-        }]
-    )
+            }]
+        )
+    except anthropic.RateLimitError as e:
+        print(f"Anthropic API quota exhausted, skipping digest: {e}", file=sys.stderr)
+        sys.exit(0)
 
     print(message.content[0].text.strip())
 
